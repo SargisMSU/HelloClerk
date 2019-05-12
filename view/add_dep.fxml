@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+
+<AnchorPane prefHeight="140.0" prefWidth="411.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="clerk.controllers.dialog.AddDepController">
+   <children>
+      <Label alignment="CENTER" layoutX="17.0" layoutY="14.0" prefHeight="34.0" prefWidth="390.0" text="Название отдела:" textAlignment="CENTER" />
+      <HBox fx:id="hbox" alignment="CENTER" layoutX="7.0" layoutY="85.0" prefHeight="41.0" prefWidth="411.0">
+         <children>
+            <Button fx:id="btnAddDep" disable="true" mnemonicParsing="false" onAction="#handleClickAdd" prefHeight="34.0" prefWidth="183.0" text="Добавить" HBox.hgrow="ALWAYS" />
+            <Button fx:id="btnDelete" mnemonicParsing="false" onAction="#onDelete" prefHeight="34.0" prefWidth="177.0" text="Удалить" HBox.hgrow="ALWAYS" />
+            <Button layoutX="286.0" layoutY="14.0" mnemonicParsing="false" onAction="#handleClickCancell" prefHeight="34.0" prefWidth="177.0" text="Отмена" />
+         </children>
+      </HBox>
+      <TextField fx:id="textFieldDep" layoutX="17.0" layoutY="54.0" prefHeight="25.0" prefWidth="390.0" promptText="название" />
+   </children>
+</AnchorPane>
