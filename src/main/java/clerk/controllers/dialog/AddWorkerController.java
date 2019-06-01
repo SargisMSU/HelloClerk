@@ -17,7 +17,6 @@ import javafx.scene.layout.HBox;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Semaphore;
 import java.util.prefs.Preferences;
 
 public class AddWorkerController {
@@ -37,7 +36,6 @@ public class AddWorkerController {
     private Worker worker;
     private boolean isChanged = false;
     private Controller.OnRefreshListener onRefreshListener;
-    private Semaphore semaphore;
 
     public AddWorkerController() {
     }
@@ -74,16 +72,10 @@ public class AddWorkerController {
             String email = emailTextField.getText();
             Departament dep = comboBoxDep.getValue();
             Worker.Position position = comboBoxPosition.getValue();
-            if (worker == null){
+            if (worker == null) {
                 worker = new Worker(name, surname, email, dep, position);
-                try {
-                    semaphore.acquire();
-                    workers.add(worker);
-                    DatabaseUtils.insertWorker(worker);
-                    semaphore.release();
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
+                workers.add(worker);
+                DatabaseUtils.insertWorker(worker);
             }else {
                 worker.setName(name);
                 worker.setSurname(surname);
@@ -98,15 +90,9 @@ public class AddWorkerController {
         btnOk.getScene().getWindow().hide();
     }
 
-    public void onDelete(){
-        try {
-            semaphore.acquire();
-            workers.remove(worker);
-            DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_WORKERS_LIST, worker.getId());
-            semaphore.release();
-        }catch (InterruptedException e){
-            e.printStackTrace();
-        }
+    public void onDelete() {
+        workers.remove(worker);
+        DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_WORKERS_LIST, worker.getId());
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_WORKER);
         btnOk.getScene().getWindow().hide();
     }
@@ -116,11 +102,10 @@ public class AddWorkerController {
     }
 
     public void setModel(Controller.OnRefreshListener onRefreshListener, ObservableList<Departament> departaments,
-                         ObservableList<Worker> workers, Worker worker, Semaphore semaphore, boolean isNecessarily) {
+                         ObservableList<Worker> workers, Worker worker, boolean isNecessarily) {
         this.workers = workers;
         this.worker = worker;
         this.onRefreshListener = onRefreshListener;
-        this.semaphore = semaphore;
         comboBoxDep.setItems(departaments);
         if (worker != null){
             nameTextField.setText(worker.getName());

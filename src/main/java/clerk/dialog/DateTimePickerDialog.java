@@ -1,13 +1,8 @@
 package clerk.dialog;
 
-import clerk.controllers.dialog.AddDepController;
 import clerk.controllers.dialog.DateTimePickerController;
-import clerk.model.Departament;
-import clerk.model.Event;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.stage.Window;
 

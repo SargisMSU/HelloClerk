@@ -33,6 +33,7 @@ public class SetSettingsDialog extends Dialog {
             window.setOnCloseRequest(ev -> window.hide());
             controller.setModel(gmail, password, start, period, autoConflicts);
             getDialogPane().setContent(root);
+            setTitle("Настройки");
             show();
         } catch (IOException e) {
             e.printStackTrace();

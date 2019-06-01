@@ -31,7 +31,6 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.Semaphore;
 import java.util.prefs.Preferences;
 
 public class AddEventController{
@@ -43,8 +42,6 @@ public class AddEventController{
     Event event;
     DateFormat format;
     Controller.OnRefreshListener onRefreshListener;
-    Semaphore semaphore;
-
     boolean isChanged = false;
 
     @FXML
@@ -90,16 +87,14 @@ public class AddEventController{
     }
 
     public void setModel(Controller.OnRefreshListener onRefreshListener, ObservableList<Departament> departaments,
-                         ObservableList<Worker> workers, ObservableList<Event> events,
-                         ObservableList<Room> rooms, Event event, Semaphore semaphore,
-                         HashMap<String, Long> sentMessagehashSet, boolean isNecessary) {
+                         ObservableList<Worker> workers, ObservableList<Event> events, ObservableList<Room> rooms,
+                         Event event, HashMap<String, Long> sentMessagehashSet, boolean isNecessary) {
         this.sentMessagehashSet = sentMessagehashSet;
         this.onRefreshListener = onRefreshListener;
         this.rooms = rooms;
         this.workers = workers;
         this.departaments = departaments;
         this.events = events;
-        this.semaphore = semaphore;
         this.event = event != null ? event : new Event();
         comboBoxRoom.setItems(rooms);
         HashMap<String, HashSet<Worker>> groupsOfWorkers = Worker.getGroupsOfWorkers(workers);
@@ -108,30 +103,24 @@ public class AddEventController{
             comboBoxWorkers.getItems().addAll(stringHashSetEntry.getValue());
         }
 
-        if (isNecessary){
+        if (isNecessary) {
             btnCancell.setDisable(true);
         }
 
-        try {
-            semaphore.acquire();
-            if (event != null) {
-                nameTextField.setText(event.getName());
-                setWorkersToComboBox(comboBoxWorkers, event);
-                comboBoxPriority.setValue(event.getPriority());
-                comboBoxRoom.setValue(event.getRoom());
-                noteTextField.setText(event.getNote() == null ? "" : event.getNote());
-                btnOk.setText("Ок");
-            } else {
-                event = new Event();
-                hBox.getChildren().remove(btnDelete.getParent());
-            }
-            btnStart.setText(format.format(event.getStart()));
-            btnEnd.setText(format.format(event.getEnd()));
-            semaphore.release();
-            isSettedModel = true;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if (event != null) {
+            nameTextField.setText(event.getName());
+            setWorkersToComboBox(comboBoxWorkers, event);
+            comboBoxPriority.setValue(event.getPriority());
+            comboBoxRoom.setValue(event.getRoom());
+            noteTextField.setText(event.getNote() == null ? "" : event.getNote());
+            btnOk.setText("Ок");
+        } else {
+            event = new Event();
+            hBox.getChildren().remove(btnDelete.getParent());
         }
+        btnStart.setText(format.format(event.getStart()));
+        btnEnd.setText(format.format(event.getEnd()));
+        isSettedModel = true;
     }
 
     private void setWorkersToComboBox(CheckComboBox<Object> comboBoxWorkers, Event event) {
@@ -255,9 +244,6 @@ public class AddEventController{
         if (isChanged) {
             String name = nameTextField.getText();
             String note = noteTextField.getText();
-            /*if (note == null){
-                note = "";
-            }*/
             long dateStart = format.parse(btnStart.getText()).getTime();
             long dateEnd = format.parse(btnEnd.getText()).getTime();
             Room room = comboBoxRoom.getValue();
@@ -268,38 +254,27 @@ public class AddEventController{
                 if (comboBoxWorkers.getItems().get(checkedIndices.get(i)) instanceof Worker)
                     newSelectedWorkers.add((Worker) comboBoxWorkers.getItems().get(checkedIndices.get(i)));
             }
-            try {
-                semaphore.acquire();
-                if (event.getName() == null){
-                    event = new Event(room, name, dateStart, dateEnd, newSelectedWorkers, priority, note);
-                    if (verifyEvent(events, event)) {
-                        DatabaseUtils.insertEvent(event);
-                        events.add(event);
-                    }else {
-                        semaphore.release();
-                        return;
-                    }
-                }else {
-                    event.setName(name);
-                    event.setNote(note);
-                    event.setRoom(room);
-                    event.setStart(dateStart);
-                    event.setEnd(dateEnd);
-                    event.setWorkers(newSelectedWorkers);
-                    event.setPriority(priority);
-                    if (verifyEvent(events, event)) {
-                        /*if (isDataChanged){
-                            sendMessageAboutChanges(event);
-                        }*/
-                        DatabaseUtils.updateEvent(event);
-                    }else {
-                        semaphore.release();
-                        return;
-                    }
+            if (event.getName() == null) {
+                event = new Event(room, name, dateStart, dateEnd, newSelectedWorkers, priority, note);
+                if (verifyEvent(events, event)) {
+                    DatabaseUtils.insertEvent(event);
+                    events.add(event);
+                } else {
+                    return;
                 }
-                semaphore.release();
-            }catch (InterruptedException e){
-                e.printStackTrace();
+            } else {
+                event.setName(name);
+                event.setNote(note);
+                event.setRoom(room);
+                event.setStart(dateStart);
+                event.setEnd(dateEnd);
+                event.setWorkers(newSelectedWorkers);
+                event.setPriority(priority);
+                if (verifyEvent(events, event)) {
+                    DatabaseUtils.updateEvent(event);
+                } else {
+                    return;
+                }
             }
         }
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_EVENT);
@@ -351,29 +326,34 @@ public class AddEventController{
                         event.getStart() >= eventTemp.getStart() && event.getStart() < eventTemp.getEnd() + 10*60*1000){
                     ArrayList<Worker> retainWorkers = (ArrayList<Worker>) event.getWorkers().clone();
                     retainWorkers.retainAll(eventTemp.getWorkers());
-                    if (!retainWorkers.isEmpty()){
-                        for (int j = 0; j < retainWorkers.size(); j++) {
+                    while (!retainWorkers.isEmpty()) {
+                        verified = true;
+                        Worker worker = retainWorkers.get(0);
+                        System.out.println("error " + worker.toString());
+                        long startOld = event.getStart();
+                        int workersSizeOld = event.getWorkers().size();
+                        long startTempOld = eventTemp.getStart();
+                        int workersSizeTempOld = eventTemp.getWorkers().size();
+                        if (!autoConflict) {
+                            popupWrongWorkers(events, event, eventTemp, worker);
+                        } else {
+                            autoSolveWorkersConflict(events, event, eventTemp, retainWorkers);
+                            return true;
+                        }
+                        if (workersSizeOld != event.getWorkers().size() || startOld != event.getStart() ||
+                                workersSizeTempOld != eventTemp.getWorkers().size() || startTempOld != eventTemp.getStart()) {
                             verified = true;
-                            System.out.println("error " + retainWorkers.get(j).toString());
-                            long startOld = event.getStart();
-                            int workersSizeOld = event.getWorkers().size();
-                            long startTempOld = eventTemp.getStart();
-                            int workersSizeTempOld = eventTemp.getWorkers().size();
-                            if (!autoConflict) {
-                                popupWrongWorkers(events, event, eventTemp, retainWorkers.get(j));
-                            }else {
-                                autoSolveWorkersConflict(events, event, eventTemp, retainWorkers);
-                                return true;
+                            if (workersSizeOld != event.getWorkers().size()) {
+                                setWorkersToComboBox(comboBoxWorkers, event);
                             }
-                            if(workersSizeOld != event.getWorkers().size() || startOld != event.getStart() ||
-                                workersSizeTempOld != eventTemp.getWorkers().size() || startTempOld != eventTemp.getStart()){
-                                verified = true;
-                                if (workersSizeOld != event.getWorkers().size()) {
-                                    setWorkersToComboBox(comboBoxWorkers, event);
-                                }
-                            }else {
-                                return false;
-                            }
+                        } else {
+                            return false;
+                        }
+                        if (eventTemp.getStart() >= event.getStart() && eventTemp.getStart() < event.getEnd() + 10*60*1000 ||
+                                event.getStart() >= eventTemp.getStart() && event.getStart() < eventTemp.getEnd() + 10*60*1000) {
+                            retainWorkers.remove(0);
+                        }else {
+                            break;
                         }
                     }
                 }
@@ -613,7 +593,6 @@ public class AddEventController{
                     public void handle(MouseEvent e) {
                         shift(event1,  event2, events, rooms);
                         sendMessageAboutChanges(event1);
-                        semaphore.release();
                         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_EVENT);
                         dialog.close();
                     }
@@ -626,14 +605,12 @@ public class AddEventController{
                         sendMessageAboutChanges(event2);
                         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_EVENT);
                         dialog.close();
-                        semaphore.release();
                     }
         });
         byHimself.addEventHandler(MouseEvent.MOUSE_CLICKED,
                 new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent e) {
-                        semaphore.release();
                         dialog.close();
                     }
                 });
@@ -703,20 +680,7 @@ public class AddEventController{
                 new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent e) {
-                        long duration = event1.getEnd() - event1.getStart();
-                        event1.setStart(event2.getEnd());
-                        event1.setEnd(event2.getEnd() + duration);
-                        for (int i = 0; i < events.size(); i++) {
-                            if (!events.get(i).equals(event2) && !events.get(i).equals(event1)){
-                                if (events.get(i).getStart() >= event1.getStart() && events.get(i).getStart() < event1.getEnd() ||
-                                        event1.getStart() >= events.get(i).getStart() && event1.getStart() < events.get(i).getEnd()){
-                                    event1.setStart(events.get(i).getEnd());
-                                    event1.setEnd(events.get(i).getEnd() + duration);
-                                    sendMessageAboutChanges(event1);
-                                }
-                            }
-                        }
-                        semaphore.release();
+                        shift(event1, event2, events, rooms);
                         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_EVENT);
                         dialog.close();
                     }
@@ -725,19 +689,7 @@ public class AddEventController{
                 new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent e) {
-                        long duration = event2.getEnd() - event2.getStart();
-                        event2.setStart(event1.getEnd());
-                        event2.setEnd(event1.getEnd() + duration);
-                        for (int i = 0; i < events.size(); i++) {
-                            if (!events.get(i).equals(event2) && !events.get(i).equals(event1)){
-                                if (events.get(i).getStart() >= event2.getStart() && events.get(i).getStart() < event2.getEnd() ||
-                                        event2.getStart() >= events.get(i).getStart() && event2.getStart() < events.get(i).getEnd()){
-                                    event2.setStart(events.get(i).getEnd());
-                                    event2.setEnd(events.get(i).getEnd() + duration);
-                                    sendMessageAboutChanges(event2);
-                                }
-                            }
-                        }
+                        shift(event2, event1, events, rooms);
                         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_EVENT);
                         dialog.close();
                     }
@@ -746,7 +698,6 @@ public class AddEventController{
                 new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent e) {
-                        semaphore.release();
                         dialog.close();
                     }
                 });
@@ -793,7 +744,6 @@ public class AddEventController{
                 new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent e) {
-                        semaphore.release();
                         dialog.close();
                     }
                 });
@@ -839,16 +789,10 @@ public class AddEventController{
         }
     }
 
-    public void deleteHandle(){
-        try {
-            semaphore.acquire();
-            events.remove(event);
-            DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_EVENTS_LIST, event.getId());
-            sendMessages(event, "Уведомление об отмене", ", уведомляем об отмене события " + event.getName());
-            semaphore.release();
-        }catch (InterruptedException e){
-            e.printStackTrace();
-        }
+    public void deleteHandle() {
+        events.remove(event);
+        DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_EVENTS_LIST, event.getId());
+        sendMessages(event, "Уведомление об отмене", ", уведомляем об отмене события " + event.getName());
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_EVENT);
         btnOk.getScene().getWindow().hide();
     }
@@ -875,25 +819,19 @@ public class AddEventController{
                 alert.setContentText("Неправильная дата!");
                 alert.show();
             }else {
-                try {
-                    semaphore.acquire();
-                    if (isStart) {
-                        isDataChanged = true;
-                        event.setStart(date);
-                        btnStart.setText(format.format(new Date(date)));
-                        if (event.getEnd() <= date + 10 * 60 * 1000) {
-                            event.setEnd(date + 10 * 60 * 1000);
-                            btnEnd.setText(format.format(date + 10 * 60 * 1000));
-                        }
-                    } else {
-                        if (event.getStart() < date) {
-                            event.setEnd(date);
-                            btnEnd.setText(format.format(new Date(date)));
-                        }
+                if (isStart) {
+                    isDataChanged = true;
+                    event.setStart(date);
+                    btnStart.setText(format.format(new Date(date)));
+                    if (event.getEnd() <= date + 10 * 60 * 1000) {
+                        event.setEnd(date + 10 * 60 * 1000);
+                        btnEnd.setText(format.format(date + 10 * 60 * 1000));
                     }
-                    semaphore.release();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                } else {
+                    if (event.getStart() < date) {
+                        event.setEnd(date);
+                        btnEnd.setText(format.format(new Date(date)));
+                    }
                 }
             }
         }

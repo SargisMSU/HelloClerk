@@ -4,9 +4,7 @@ import clerk.model.Departament;
 import clerk.model.Event;
 import clerk.model.Room;
 import clerk.model.Worker;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -143,13 +141,6 @@ public class ExcelUtils {
         HSSFSheet sheetDepartament = workbook.createSheet("Отделы");
         HSSFSheet sheetRoom = workbook.createSheet("Комнаты");
 
-        for (int i = 0; i < 7; i++) {
-            sheetEvent.autoSizeColumn(i);
-            sheetWorker.autoSizeColumn(i);
-            sheetEventWorker.autoSizeColumn(i);
-            sheetDepartament.autoSizeColumn(i);
-            sheetRoom.autoSizeColumn(i);
-        }
 
         Row headerEvent = sheetEvent.createRow(0);
         headerEvent.createCell(0).setCellValue("id");
@@ -223,6 +214,14 @@ public class ExcelUtils {
             row.createCell(0).setCellValue(room.getId());
             row.createCell(1).setCellValue(room.getName());
             row.createCell(2).setCellValue(room.getCapacity());
+        }
+
+        for (int i = 0; i < 7; i++) {
+            sheetEvent.autoSizeColumn(i);
+            sheetWorker.autoSizeColumn(i);
+            sheetEventWorker.autoSizeColumn(i);
+            sheetDepartament.autoSizeColumn(i);
+            sheetRoom.autoSizeColumn(i);
         }
 
         try {

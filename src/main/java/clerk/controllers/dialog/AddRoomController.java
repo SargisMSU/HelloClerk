@@ -15,10 +15,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 
 import java.util.HashMap;
-import java.util.concurrent.Semaphore;
 
 public class AddRoomController {
 
@@ -40,7 +38,6 @@ public class AddRoomController {
     boolean isNecessary;
     Room room;
     boolean isChanged = false;
-    Semaphore semaphore;
 
     public AddRoomController() {
     }
@@ -67,45 +64,27 @@ public class AddRoomController {
         if (isChanged) {
             String name = nameTextField.getText();
             int capacity = Integer.parseInt(capacityTextField.getText());
-            if (room == null){
+            if (room == null) {
                 room = new Room(name, capacity);
-                try {
-                    semaphore.acquire();
-                    rooms.add(room);
-                    DatabaseUtils.insertRoom(room);
-                    semaphore.release();
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
+                rooms.add(room);
+                DatabaseUtils.insertRoom(room);
             }else {
-                try {
-                    semaphore.acquire();
-                    room.setName(name);
-                    DatabaseUtils.updateRoom(room);
-                    semaphore.release();
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
+                room.setName(name);
+                DatabaseUtils.updateRoom(room);
             }
         }
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_DEPARTAMENT);
         btnOk.getScene().getWindow().hide();
     }
 
-    public void handleClickDelete(){
-        try {
-            semaphore.acquire();
-            rooms.remove(room);
-            DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_ROOMS_LIST, room.getId());
-            semaphore.release();
-        }catch (InterruptedException e){
-            e.printStackTrace();
-        }
+    public void handleClickDelete() {
+        rooms.remove(room);
+        DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_ROOMS_LIST, room.getId());
         for (int i = 0; i < events.size(); i++) {
-            if (events.get(i).getRoom().equals(room)){
+            if (events.get(i).getRoom().equals(room)) {
                 events.get(i).setRoom(null);
                 new AddEventDialog(onRefreshListener, departaments, workers, events, rooms,
-                        events.get(i), semaphore, sentMessageHashMap, true);
+                        events.get(i),sentMessageHashMap, true);
             }
         }
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_DEPARTAMENT);
@@ -118,8 +97,7 @@ public class AddRoomController {
 
     public void setModel(Controller.OnRefreshListener onRefreshListener, ObservableList<Worker> workers,
                          ObservableList<Event> events, ObservableList<Departament> departaments,
-                         ObservableList<Room> rooms, Room room, Semaphore semaphore,
-                         HashMap<String, Long> sentMessagesHashMap) {
+                         ObservableList<Room> rooms, Room room, HashMap<String, Long> sentMessagesHashMap) {
         if (room == null){
             hbox.getChildren().remove(btnDelete.getParent());
         }else {
@@ -131,7 +109,6 @@ public class AddRoomController {
         this.rooms = rooms;
         this.events = events;
         this.room = room;
-        this.semaphore = semaphore;
         nameTextField.setText(room != null ? room.getName() : "");
         capacityTextField.setText(room != null ? room.getCapacity() + "" : "");
         this.onRefreshListener = onRefreshListener;

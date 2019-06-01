@@ -22,8 +22,7 @@ public class AddRoomDialog extends Dialog<Room> {
 
     public AddRoomDialog(Controller.OnRefreshListener onRefreshListener, ObservableList<Worker> workers,
                          ObservableList<Event> events, ObservableList<Departament> departaments,
-                         ObservableList<Room> rooms, Room room, Semaphore semaphore,
-                         HashMap<String, Long> hashMap) {
+                         ObservableList<Room> rooms, Room room, HashMap<String, Long> hashMap) {
         Parent root = null;
         try {
             File file = new File("view/add_room.fxml");
@@ -33,7 +32,7 @@ public class AddRoomDialog extends Dialog<Room> {
             Window window = getDialogPane().getScene().getWindow();
             window.setOnCloseRequest(event -> window.hide());
             AddRoomController controller = loader.getController();
-            controller.setModel(onRefreshListener, workers, events, departaments, rooms, room, semaphore, hashMap);
+            controller.setModel(onRefreshListener, workers, events, departaments, rooms, room, hashMap);
             getDialogPane().setContent(root);
             show();
         } catch (IOException e) {

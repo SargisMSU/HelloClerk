@@ -45,7 +45,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.prefs.Preferences;
 
 public class Controller {
@@ -84,7 +87,6 @@ public class Controller {
     ObservableList<Event> events;
     ObservableList<Room> rooms;
     DateFormat format;
-    Semaphore semaphore;
     SenderMailTLS senderMailTLS;
     HashMap<String, Long> sentMessagesHashMap;
 
@@ -96,10 +98,10 @@ public class Controller {
     @FXML
     public void initialize() {
         DatabaseUtils.connToDB();
-        events = FXCollections.observableArrayList();
-        workers = FXCollections.observableArrayList();
-        departaments = FXCollections.observableArrayList();
-        rooms = FXCollections.observableArrayList();
+        events = FXCollections.synchronizedObservableList(FXCollections.observableArrayList());
+        workers = FXCollections.synchronizedObservableList(FXCollections.observableArrayList());
+        departaments = FXCollections.synchronizedObservableList(FXCollections.observableArrayList());
+        rooms = FXCollections.synchronizedObservableList(FXCollections.observableArrayList());
         departaments.addAll(DatabaseUtils.readTableDepartaments());
         workers.addAll(DatabaseUtils.readTableWorkers(departaments));
         rooms.addAll(DatabaseUtils.readTableRooms());
@@ -170,10 +172,10 @@ public class Controller {
                     }
                     if (row != null) {
                         Departament departament = (Departament) row.getItem();
-                        new AddDepartamentDialog(onRefreshListener, departaments, workers, departament, semaphore);
+                        new AddDepartamentDialog(onRefreshListener, departaments, workers, departament);
                         System.out.println("departament = " + departament);
                     } else {
-                        new AddDepartamentDialog(onRefreshListener, departaments, workers, null, semaphore);
+                        new AddDepartamentDialog(onRefreshListener, departaments, workers, null);
                     }
                 }
             }
@@ -193,12 +195,12 @@ public class Controller {
                 }
                 if (row != null) {
                     Event event = (Event) row.getItem();
-                    new AddEventDialog(onRefreshListener, departaments, workers, events, rooms,
-                            event, semaphore, sentMessagesHashMap, false);
+                    new AddEventDialog(onRefreshListener, departaments, workers, events,
+                            rooms, event, sentMessagesHashMap, false);
                     System.out.println("event = " + event);
                 } else {
-                    new AddEventDialog(onRefreshListener, departaments, workers, events, rooms,
-                            null, semaphore, sentMessagesHashMap, false);
+                    new AddEventDialog(onRefreshListener, departaments, workers, events,
+                            rooms, null,  sentMessagesHashMap, false);
                 }
             }
         });
@@ -219,10 +221,10 @@ public class Controller {
                 if(button==MouseButton.PRIMARY){
                     if (row != null) {
                         Worker worker = (Worker) row.getItem();
-                        new AddWorkerDialog(onRefreshListener, departaments, workers, worker, semaphore, false);
+                        new AddWorkerDialog(onRefreshListener, departaments, workers, worker, false);
                         System.out.println("worker = " + worker);
                     } else {
-                        new AddWorkerDialog(onRefreshListener, departaments, workers, null, semaphore, false);
+                        new AddWorkerDialog(onRefreshListener, departaments, workers, null,false);
                     }
                 }else if(button==MouseButton.SECONDARY){
                     Worker worker = (Worker) row.getItem();
@@ -247,10 +249,10 @@ public class Controller {
                 if(button==MouseButton.PRIMARY){
                     if (row != null) {
                         Room room = (Room) row.getItem();
-                        new AddRoomDialog(onRefreshListener, workers, events, departaments, rooms, room, semaphore, sentMessagesHashMap);
+                        new AddRoomDialog(onRefreshListener, workers, events, departaments, rooms, room, sentMessagesHashMap);
                         System.out.println("room = " + room);
                     } else {
-                        new AddRoomDialog(onRefreshListener, workers, events, departaments, rooms, null, semaphore, sentMessagesHashMap);
+                        new AddRoomDialog(onRefreshListener, workers, events, departaments, rooms, null, sentMessagesHashMap);
                     }
                 }else if(button==MouseButton.SECONDARY){
                     Room room = (Room) row.getItem();
@@ -272,8 +274,6 @@ public class Controller {
                             setStyle("");
                         } else {
                             Event.Priority priority = item.getPriority();
-                            /*if (priority == null)
-                                return;*/
                             switch (priority) {
                                 case HIGH: {
                                     setStyle("-fx-background-color:#F79F81");
@@ -370,25 +370,14 @@ public class Controller {
         });
 
         sentMessagesHashMap = new HashMap<>();
-        semaphore = new Semaphore(1);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(15000);
-                        semaphore.acquire();
-                        checkEvents(events);
-                        semaphore.release();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
+        pool.scheduleWithFixedDelay(()->{
+            checkEvents(events);
+        }, 15, 15, TimeUnit.SECONDS);
     }
 
     public void checkEvents(ObservableList<Event> events) {
+        System.out.println(new Date() + " -------check----");
         Preferences prefs = Preferences.userRoot().node("clerk");
         String gmail = prefs.get("email", "");
         String password = prefs.get("password", "");
@@ -421,20 +410,20 @@ public class Controller {
     }
 
     public void onAddDepartament() {
-        new AddDepartamentDialog(onRefreshListener, departaments, workers, null, semaphore);
+        new AddDepartamentDialog(onRefreshListener, departaments, workers, null);
     }
 
     public void onAddWorker() {
-        new AddWorkerDialog(onRefreshListener, departaments, workers, null, semaphore, false);
+        new AddWorkerDialog(onRefreshListener, departaments, workers, null,false);
     }
 
     public void onAddEvent() {
         new AddEventDialog(onRefreshListener, departaments, workers, events, rooms,
-                null, semaphore, sentMessagesHashMap, false);
+                null, sentMessagesHashMap, false);
     }
 
     public void onAddRoom() {
-        new AddRoomDialog(onRefreshListener, workers, events, departaments, rooms, null, semaphore, sentMessagesHashMap);
+        new AddRoomDialog(onRefreshListener, workers, events, departaments, rooms, null, sentMessagesHashMap);
     }
 
     public void onBtnAddClick() {
@@ -482,13 +471,7 @@ public class Controller {
         fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
         File file = fileChooser.showOpenDialog(tableViewRoom.getScene().getWindow());
         if (file != null) {
-            try {
-                semaphore.acquire();
-                ExcelUtils.importFromExcel(file.getPath(), departaments, rooms, events, workers);
-                semaphore.release();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            ExcelUtils.importFromExcel(file.getPath(), departaments, rooms, events, workers);
         }
     }
 

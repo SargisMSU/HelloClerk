@@ -2,7 +2,6 @@ package clerk.dialog;
 
 import clerk.controllers.Controller;
 import clerk.controllers.dialog.AddEventController;
-import clerk.controllers.dialog.AddWorkerController;
 import clerk.model.Departament;
 import clerk.model.Event;
 import clerk.model.Room;
@@ -17,14 +16,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.concurrent.Semaphore;
 
 public class AddEventDialog extends Dialog<Worker> {
 
     public AddEventDialog(Controller.OnRefreshListener onRefreshListener, ObservableList<Departament> departaments,
-                          ObservableList<Worker>workers, ObservableList<Event> events,
-                          ObservableList<Room> rooms, Event event, Semaphore semaphore,
-                          HashMap<String, Long> sentMessageHashSet, boolean isNecessary){
+                          ObservableList<Worker>workers, ObservableList<Event> events, ObservableList<Room> rooms,
+                          Event event, HashMap<String, Long> sentMessageHashSet, boolean isNecessary){
         Parent root = null;
         try {
             File file = new File("view/add_event.fxml");
@@ -37,7 +34,7 @@ public class AddEventDialog extends Dialog<Worker> {
                 window.setOnCloseRequest(ev -> window.hide());
             }
             controller.setModel(onRefreshListener, departaments, workers, events, rooms,
-                    event, semaphore, sentMessageHashSet, isNecessary);
+                    event, sentMessageHashSet, isNecessary);
             getDialogPane().setContent(root);
             show();
         } catch (IOException e) {

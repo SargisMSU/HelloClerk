@@ -33,7 +33,7 @@ public class AddDepController {
     ObservableList<Worker> workers;
     Departament departament;
     boolean isChanged = false;
-    Semaphore semaphore;
+    //Semaphore semaphore;
 
     public AddDepController() {
     }
@@ -56,25 +56,13 @@ public class AddDepController {
     public void handleClickAdd(){
         if (isChanged) {
             String text = textFieldDep.getText();
-            if (departament == null){
+            if (departament == null) {
                 departament = new Departament(text);
-                try {
-                    semaphore.acquire();
-                    departaments.add(departament);
-                    DatabaseUtils.insertDepartament(departament);
-                    semaphore.release();
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
+                departaments.add(departament);
+                DatabaseUtils.insertDepartament(departament);
             }else {
-                try {
-                    semaphore.acquire();
-                    departament.setName(text);
-                    DatabaseUtils.updateDepartament(departament.getId(), text);
-                    semaphore.release();
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
+                departament.setName(text);
+                DatabaseUtils.updateDepartament(departament.getId(), text);
             }
         }
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_DEPARTAMENT);
@@ -85,19 +73,14 @@ public class AddDepController {
         btnAddDep.getScene().getWindow().hide();
     }
 
-    public void onDelete(){
-        try {
-            semaphore.acquire();
-            departaments.remove(departament);
-            DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_DEPART_LIST, departament.getId());
-            semaphore.release();
-        }catch (InterruptedException e){
-            e.printStackTrace();
-        }
+    public void onDelete() {
+        departaments.remove(departament);
+        DatabaseUtils.deleteRecordFromTable(DatabaseUtils.TABLE_DEPART_LIST, departament.getId());
+
         for (int i = 0; i < workers.size(); i++) {
-            if (workers.get(i).getDepartament().equals(departament)){
+            if (workers.get(i).getDepartament().equals(departament)) {
                 workers.get(i).setDepartament(null);
-                new AddWorkerDialog(onRefreshListener, departaments, workers, workers.get(i), semaphore, true);
+                new AddWorkerDialog(onRefreshListener, departaments, workers, workers.get(i), true);
             }
         }
         onRefreshListener.refresh(Controller.OnRefreshListener.TABLE_VIEW_DEPARTAMENT);
@@ -105,7 +88,7 @@ public class AddDepController {
     }
 
     public void setModel(Controller.OnRefreshListener onRefreshListener, ObservableList<Departament> departaments,
-                         ObservableList<Worker> workers, Departament departament, Semaphore semaphore) {
+                         ObservableList<Worker> workers, Departament departament) {
         if (departament == null){
             hbox.getChildren().remove(btnDelete);
         }else {
@@ -114,7 +97,6 @@ public class AddDepController {
         this.departaments = departaments;
         this.workers = workers;
         this.departament = departament;
-        this.semaphore = semaphore;
         textFieldDep.setText(departament != null ? departament.getName() : "");
         this.onRefreshListener = onRefreshListener;
     }

@@ -13,13 +13,11 @@ import javafx.stage.Window;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.concurrent.Semaphore;
 
 public class AddWorkerDialog extends Dialog<Worker> {
 
     public AddWorkerDialog(Controller.OnRefreshListener onRefreshListener, ObservableList<Departament> departaments,
-                           ObservableList<Worker> workers, Worker worker, Semaphore semaphore, boolean isNecessarily){
+                           ObservableList<Worker> workers, Worker worker, boolean isNecessarily){
         Parent root = null;
         try {
             File file = new File("view/add_worker.fxml");
@@ -31,7 +29,7 @@ public class AddWorkerDialog extends Dialog<Worker> {
             if (!isNecessarily) {
                 window.setOnCloseRequest(event -> window.hide());
             }
-            controller.setModel(onRefreshListener, departaments, workers, worker, semaphore, isNecessarily);
+            controller.setModel(onRefreshListener, departaments, workers, worker, isNecessarily);
             getDialogPane().setContent(root);
             show();
         } catch (IOException e) {
